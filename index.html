@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador de Fluxo — Investimento Imobiliário</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&family=Syne:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#0e0e0e;--bg2:#161616;--bg3:#1e1e1e;--bg4:#242424;
+  --border:rgba(255,255,255,0.08);
+  --gold:#c8a96e;--gold2:#e8c990;--gold-dim:rgba(200,169,110,0.12);--gold-border:rgba(200,169,110,0.25);
+  --text:#f0ece4;--text2:#9e9a93;--text3:#5c5952;
+  --green:#5eb87a;--green-dim:rgba(94,184,122,0.1);
+  --red:#e05f5f;--red-dim:rgba(224,95,95,0.1);
+  --blue:#6b9fd4;--blue-dim:rgba(107,159,212,0.1);
+  --r:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;font-size:14px;min-height:100vh;}
+.app-header{padding:1.5rem 2rem 0;border-bottom:1px solid var(--border);display:flex;align-items:flex-end;}
+.app-title{font-family:'Cormorant Garamond',serif;font-size:1.6rem;color:var(--gold);letter-spacing:.04em;padding-bottom:1rem;margin-right:2rem;white-space:nowrap;}
+.tabs{display:flex;}
+.tab{padding:.6rem 1.4rem;font-size:13px;cursor:pointer;border:none;background:none;color:var(--text3);border-bottom:2px solid transparent;transition:all .2s;letter-spacing:.05em;font-family:'Syne',sans-serif;}
+.tab:hover{color:var(--text2);}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+.page{display:none;padding:1.5rem 2rem 3rem;}
+.page.active{display:block;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;}
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem 1.5rem;}
+.panel-title{font-family:'Cormorant Garamond',serif;font-size:1.15rem;color:var(--gold);margin-bottom:1rem;letter-spacing:.03em;display:flex;align-items:center;gap:8px;}
+.panel-title .num{font-family:'DM Mono',monospace;font-size:.72rem;background:var(--gold-dim);color:var(--gold);border-radius:4px;padding:2px 7px;}
+.sec-label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin:1.1rem 0 .65rem;padding-bottom:.4rem;border-bottom:1px solid var(--border);}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px 14px;}
+.field{display:flex;flex-direction:column;gap:4px;}
+.field.s2{grid-column:span 2;}
+label{font-size:11px;color:var(--text2);letter-spacing:.06em;text-transform:uppercase;}
+input,select{background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;padding:7px 10px;width:100%;outline:none;transition:border-color .15s;}
+input:focus,select:focus{border-color:var(--gold);}
+input::placeholder{color:var(--text3);}
+.calc-box{background:var(--bg4);border:1px solid var(--gold-border);border-radius:var(--r);padding:.9rem 1.1rem;margin:.8rem 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+.cb-item{display:flex;flex-direction:column;gap:3px;}
+.cb-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;}
+.cb-val{font-family:'DM Mono',monospace;font-size:17px;font-weight:500;color:var(--gold);}
+.parcela-box{background:var(--gold-dim);border:1px solid var(--gold-border);border-radius:var(--r);padding:.9rem 1.1rem;margin:.8rem 0;}
+.pb-lbl{font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;}
+.pb-val{font-family:'DM Mono',monospace;font-size:22px;font-weight:500;color:var(--gold2);}
+.pb-sub{font-size:11px;color:var(--text3);margin-top:4px;font-family:'DM Mono',monospace;}
+.alert-box{background:var(--red-dim);border:1px solid rgba(224,95,95,.3);border-radius:var(--r);padding:.65rem 1rem;margin:.5rem 0;font-size:12px;color:var(--red);}
+.reforcos-list{display:flex;flex-direction:column;gap:6px;margin-top:4px;}
+.reforco-row{display:grid;grid-template-columns:130px 1fr auto;gap:8px;align-items:center;}
+.btn-icon{background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;}
+.btn-icon:hover{border-color:var(--red);color:var(--red);}
+.ref-last-input{border-color:var(--gold-border) !important;color:var(--gold) !important;}
+.btn-simulate{background:var(--gold);color:#0e0e0e;border:none;border-radius:var(--r);padding:12px 2rem;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;letter-spacing:.08em;cursor:pointer;width:100%;margin-top:1.25rem;transition:all .15s;text-transform:uppercase;}
+.btn-simulate:hover{background:var(--gold2);}
+.export-row{display:flex;gap:8px;margin-bottom:1rem;align-items:center;flex-wrap:wrap;}
+.btn-export{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;font-size:12px;font-family:'Syne',sans-serif;letter-spacing:.05em;cursor:pointer;border:1px solid;transition:all .15s;font-weight:500;}
+.btn-xlsx{background:var(--green-dim);border-color:rgba(94,184,122,.3);color:var(--green);}
+.btn-xlsx:hover{background:rgba(94,184,122,.18);}
+.btn-pdf{background:var(--red-dim);border-color:rgba(224,95,95,.3);color:var(--red);}
+.btn-pdf:hover{background:rgba(224,95,95,.18);}
+.export-label{font-size:11px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-right:4px;}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem;}
+.metric{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;}
+.metric-label{font-size:10px;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px;}
+.metric-val{font-family:'DM Mono',monospace;font-size:16px;font-weight:500;}
+.metric-val.gold{color:var(--gold);}
+.metric-val.green{color:var(--green);}
+.metric-val.red{color:var(--red);}
+.metric-val.blue{color:var(--blue);}
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-family:'DM Mono',monospace;font-size:12px;}
+thead th{font-size:10px;color:var(--text3);text-align:right;padding:6px 10px;border-bottom:1px solid var(--border);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;}
+thead th:first-child{text-align:left;}
+tbody tr{transition:background .1s;}
+tbody tr:hover{background:rgba(255,255,255,.025);}
+td{padding:5px 10px;border-bottom:1px solid rgba(255,255,255,.04);text-align:right;white-space:nowrap;}
+td:first-child{text-align:left;font-family:'Syne',sans-serif;font-size:12px;}
+.t-green{color:var(--green);}
+.t-red{color:var(--red);}
+.t-gold{color:var(--gold);}
+.t-dim{color:var(--text3);}
+tr.row-entrada td{background:rgba(94,184,122,.05);}
+tr.row-reforco td{background:rgba(200,169,110,.06);}
+.section-title{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin:1.25rem 0 .75rem;}
+.filter-row{display:flex;gap:10px;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;}
+.filter-row select{width:auto;}
+.filter-row label{text-transform:none;font-size:12px;}
+.rent-panel{background:var(--bg2);border:1px solid var(--gold-border);border-radius:var(--r);padding:1.25rem 1.5rem;margin-top:1.5rem;}
+.rent-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px;}
+.rent-card{background:var(--bg4);border-radius:var(--r);padding:12px 14px;border:1px solid var(--border);}
+.rent-card.hi{border-color:var(--gold-border);background:var(--gold-dim);}
+.rent-card.gr{border-color:rgba(94,184,122,.25);background:var(--green-dim);}
+.rent-card.bl{border-color:rgba(107,159,212,.25);background:var(--blue-dim);}
+.rent-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;}
+.rent-val{font-family:'DM Mono',monospace;font-size:15px;font-weight:500;color:var(--text);}
+.rent-val.gold{color:var(--gold);}
+.rent-val.green{color:var(--green);}
+.rent-val.blue{color:var(--blue);}
+.rent-val.big{font-size:19px;}
+.rent-sub{font-size:10px;color:var(--text3);margin-top:3px;font-family:'DM Mono',monospace;}
+.roi-row{display:grid;grid-template-columns:1fr 1fr 2fr;gap:10px;}
+.compare-metric{background:var(--bg3);border-radius:6px;padding:10px 12px;}
+.compare-metric .lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
+.compare-metric .val{font-family:'DM Mono',monospace;font-size:14px;}
+.winner{border:1px solid var(--gold);background:var(--gold-dim) !important;}
+.winner .val{color:var(--gold);}
+.winner .lbl{color:var(--gold);}
+.empty-state{text-align:center;padding:3rem;color:var(--text3);font-family:'Cormorant Garamond',serif;font-size:1.1rem;}
+.legend-row{display:flex;gap:14px;margin-bottom:.75rem;flex-wrap:wrap;}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);}
+.leg-dot{width:8px;height:8px;border-radius:2px;}
+@media print{
+  body{background:#fff !important;color:#000 !important;}
+  .app-header,.btn-simulate,.export-row,.filter-row{display:none !important;}
+  .page{display:block !important;padding:1rem !important;}
+  #tab-comparar{display:none !important;}
+  .panel,.metric,.calc-box,.parcela-box,.rent-panel,.rent-card{background:#f9f9f9 !important;border:1px solid #ddd !important;}
+  td,th{color:#000 !important;border-color:#ddd !important;}
+  tr.row-entrada td{background:#e8f5e9 !important;}
+  tr.row-reforco td{background:#fff8e1 !important;}
+  canvas{display:none !important;}
+  .two-col,.rent-grid,.roi-row{grid-template-columns:1fr 1fr !important;}
+}
+@media(max-width:900px){
+  .two-col,.roi-row{grid-template-columns:1fr;}
+  .fg2,.fg3{grid-template-columns:1fr;}
+  .field.s2{grid-column:span 1;}
+  .metrics,.rent-grid{grid-template-columns:1fr 1fr;}
+  .app-header{flex-direction:column;align-items:flex-start;gap:.5rem;}
+  .app-title{padding-bottom:0;}
+  .page{padding:1rem;}
+}
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="app-title">Fluxo Imobiliário</div>
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('sim1')">Imóvel 1</button>
+    <button class="tab" onclick="showTab('sim2')">Imóvel 2</button>
+    <button class="tab" onclick="showTab('comparar')">Comparar</button>
+  </div>
+</div>
+
+<!-- ═══ IMÓVEL 1 ═══ -->
+<div class="page active" id="tab-sim1">
+  <div class="two-col" style="margin-bottom:1.5rem">
+    <div class="panel">
+      <div class="panel-title"><span class="num">01</span> Configuração — Imóvel 1</div>
+      <div class="sec-label">Imóvel</div>
+      <div class="fg2">
+        <div class="field s2"><label>Nome / identificação</label><input id="s1-nome" value="Imóvel 1"></div>
+        <div class="field"><label>Valor total do imóvel (R$)</label><input id="s1-valor" type="number" value="642500" oninput="calcAuto('s1')"></div>
+        <div class="field"><label>% pago durante a obra</label><input id="s1-pct-obra" type="number" value="35" step="0.1" oninput="calcAuto('s1')"></div>
+      </div>
+      <div class="calc-box">
+        <div class="cb-item"><div class="cb-lbl">Montante total a pagar na obra</div><div class="cb-val" id="s1-montante-display">—</div></div>
+        <div class="cb-item" style="align-items:flex-end"><div class="cb-lbl">Meses de obra</div><input id="s1-meses" type="number" value="50" min="1" style="width:75px;text-align:center;" oninput="calcAuto('s1')"></div>
+      </div>
+      <div class="sec-label">Entrada</div>
+      <div class="fg3">
+        <div class="field"><label>Valor total de entrada (R$)</label><input id="s1-entrada-total" type="number" value="60000" oninput="calcAuto('s1')"></div>
+        <div class="field"><label>Parcelas de entrada</label><input id="s1-entrada-n" type="number" value="5" min="1"></div>
+        <div class="field"><label>Início (MM/AAAA)</label><input id="s1-entrada-inicio" value="05/2026"></div>
+      </div>
+      <div class="sec-label">Reforços</div>
+      <div class="fg2">
+        <div class="field"><label>% do montante em reforços</label><input id="s1-pct-reforco" type="number" value="28.87" step="0.01" oninput="calcAuto('s1')"></div>
+        <div class="field"><label>Quantidade de reforços</label><input id="s1-qtd-reforcos" type="number" value="4" min="0" oninput="syncReforcos('s1')"></div>
+      </div>
+      <div class="reforcos-list" id="s1-reforcos"></div>
+      <div class="calc-box" style="margin-top:.75rem">
+        <div class="cb-item"><div class="cb-lbl">Total em reforços</div><div class="cb-val" id="s1-total-ref">—</div></div>
+        <div class="cb-item"><div class="cb-lbl">Valor por reforço (base)</div><div class="cb-val" id="s1-val-ref">—</div></div>
+      </div>
+      <div class="sec-label">Parcela mensal — calculada automaticamente</div>
+      <div id="s1-alerta" class="alert-box" style="display:none"></div>
+      <div class="parcela-box">
+        <div class="pb-lbl">Valor de cada parcela mensal</div>
+        <div class="pb-val" id="s1-parcela-val">—</div>
+        <div class="pb-sub" id="s1-parcela-sub"></div>
+      </div>
+      <div class="field" style="margin-top:.85rem;max-width:200px">
+        <label>Início das parcelas (MM/AAAA)</label>
+        <input id="s1-inicio" value="05/2026">
+      </div>
+      <div class="sec-label">Seu dinheiro</div>
+      <div class="fg2">
+        <div class="field"><label>Saldo em conta (R$)</label><input id="s1-saldo" type="number" value="240000"></div>
+        <div class="field"><label>Rentabilidade mensal (%)</label><input id="s1-taxa" type="number" step="0.01" value="1.00"></div>
+      </div>
+      <div class="sec-label">Projeção de valorização</div>
+      <div class="fg2">
+        <div class="field"><label>Valorização anual do imóvel (%)</label><input id="s1-val-anual" type="number" step="0.1" value="8" placeholder="Ex: 8"></div>
+        <div class="field"><label>Período da obra (calculado)</label><input id="s1-anos-obra" type="text" readonly style="background:var(--bg4);color:var(--text3);cursor:default;"></div>
+      </div>
+      <button class="btn-simulate" onclick="simular('s1')">Simular Fluxo</button>
+    </div>
+    <div class="panel" id="s1-resumo-panel" style="display:none">
+      <div class="panel-title"><span class="num">02</span> Resumo do fluxo</div>
+      <div id="s1-metrics"></div>
+      <div class="section-title" style="margin-top:0">Evolução do saldo</div>
+      <div class="legend-row">
+        <span class="leg-item"><span class="leg-dot" style="background:#c8a96e"></span>Saldo em conta</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#e05f5f"></span>Desembolso do principal</span>
+      </div>
+      <div style="position:relative;height:210px;"><canvas id="s1-chart"></canvas></div>
+    </div>
+  </div>
+  <div id="s1-rent-section" style="display:none">
+    <div class="rent-panel">
+      <div class="panel-title"><span class="num">03</span> Projeção de rentabilidade</div>
+      <div class="rent-grid" id="s1-rent-grid"></div>
+      <div class="roi-row" id="s1-roi-row"></div>
+    </div>
+  </div>
+  <div id="s1-result" style="display:none;margin-top:1.5rem">
+    <div class="export-row">
+      <span class="export-label">Exportar:</span>
+      <button class="btn-export btn-xlsx" onclick="exportXLSX('s1')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Excel / Google Sheets</button>
+      <button class="btn-export btn-pdf" onclick="exportPDF('s1')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> PDF</button>
+      <div style="flex:1"></div>
+      <label>Exibir:</label>
+      <select id="s1-filter" onchange="renderTabela('s1')"><option value="all">Todos os meses</option><option value="pagamento">Só meses com pagamento</option></select>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th style="text-align:left">Mês</th><th>Saldo início</th><th>Rend. mensal</th><th>Pgto imóvel</th><th>Rend. cobre</th><th>Do principal</th><th>% coberto</th><th>Saldo fim</th></tr></thead>
+      <tbody id="s1-tbody"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- ═══ IMÓVEL 2 ═══ -->
+<div class="page" id="tab-sim2">
+  <div class="two-col" style="margin-bottom:1.5rem">
+    <div class="panel">
+      <div class="panel-title"><span class="num">01</span> Configuração — Imóvel 2</div>
+      <div class="sec-label">Imóvel</div>
+      <div class="fg2">
+        <div class="field s2"><label>Nome / identificação</label><input id="s2-nome" value="Imóvel 2" placeholder="Ex: Studio Centro Floripa"></div>
+        <div class="field"><label>Valor total do imóvel (R$)</label><input id="s2-valor" type="number" placeholder="500000" oninput="calcAuto('s2')"></div>
+        <div class="field"><label>% pago durante a obra</label><input id="s2-pct-obra" type="number" placeholder="35" step="0.1" oninput="calcAuto('s2')"></div>
+      </div>
+      <div class="calc-box">
+        <div class="cb-item"><div class="cb-lbl">Montante total a pagar na obra</div><div class="cb-val" id="s2-montante-display">—</div></div>
+        <div class="cb-item" style="align-items:flex-end"><div class="cb-lbl">Meses de obra</div><input id="s2-meses" type="number" placeholder="36" min="1" style="width:75px;text-align:center;" oninput="calcAuto('s2')"></div>
+      </div>
+      <div class="sec-label">Entrada</div>
+      <div class="fg3">
+        <div class="field"><label>Valor total de entrada (R$)</label><input id="s2-entrada-total" type="number" placeholder="50000" oninput="calcAuto('s2')"></div>
+        <div class="field"><label>Parcelas de entrada</label><input id="s2-entrada-n" type="number" placeholder="4" min="1"></div>
+        <div class="field"><label>Início (MM/AAAA)</label><input id="s2-entrada-inicio" placeholder="05/2026"></div>
+      </div>
+      <div class="sec-label">Reforços</div>
+      <div class="fg2">
+        <div class="field"><label>% do montante em reforços</label><input id="s2-pct-reforco" type="number" placeholder="20" step="0.01" oninput="calcAuto('s2')"></div>
+        <div class="field"><label>Quantidade de reforços</label><input id="s2-qtd-reforcos" type="number" placeholder="3" min="0" oninput="syncReforcos('s2')"></div>
+      </div>
+      <div class="reforcos-list" id="s2-reforcos"></div>
+      <div class="calc-box" style="margin-top:.75rem">
+        <div class="cb-item"><div class="cb-lbl">Total em reforços</div><div class="cb-val" id="s2-total-ref">—</div></div>
+        <div class="cb-item"><div class="cb-lbl">Valor por reforço (base)</div><div class="cb-val" id="s2-val-ref">—</div></div>
+      </div>
+      <div class="sec-label">Parcela mensal — calculada automaticamente</div>
+      <div id="s2-alerta" class="alert-box" style="display:none"></div>
+      <div class="parcela-box">
+        <div class="pb-lbl">Valor de cada parcela mensal</div>
+        <div class="pb-val" id="s2-parcela-val">—</div>
+        <div class="pb-sub" id="s2-parcela-sub"></div>
+      </div>
+      <div class="field" style="margin-top:.85rem;max-width:200px">
+        <label>Início das parcelas (MM/AAAA)</label>
+        <input id="s2-inicio" placeholder="01/2027">
+      </div>
+      <div class="sec-label">Seu dinheiro</div>
+      <div class="fg2">
+        <div class="field"><label>Saldo em conta (R$)</label><input id="s2-saldo" type="number" placeholder="240000"></div>
+        <div class="field"><label>Rentabilidade mensal (%)</label><input id="s2-taxa" type="number" step="0.01" placeholder="1.00"></div>
+      </div>
+      <div class="sec-label">Projeção de valorização</div>
+      <div class="fg2">
+        <div class="field"><label>Valorização anual do imóvel (%)</label><input id="s2-val-anual" type="number" step="0.1" placeholder="8"></div>
+        <div class="field"><label>Período da obra (calculado)</label><input id="s2-anos-obra" type="text" readonly style="background:var(--bg4);color:var(--text3);cursor:default;"></div>
+      </div>
+      <button class="btn-simulate" onclick="simular('s2')">Simular Fluxo</button>
+    </div>
+    <div class="panel" id="s2-resumo-panel" style="display:none">
+      <div class="panel-title"><span class="num">02</span> Resumo do fluxo</div>
+      <div id="s2-metrics"></div>
+      <div class="section-title" style="margin-top:0">Evolução do saldo</div>
+      <div class="legend-row">
+        <span class="leg-item"><span class="leg-dot" style="background:#6b9fd4"></span>Saldo em conta</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#e05f5f"></span>Desembolso do principal</span>
+      </div>
+      <div style="position:relative;height:210px;"><canvas id="s2-chart"></canvas></div>
+    </div>
+  </div>
+  <div id="s2-rent-section" style="display:none">
+    <div class="rent-panel">
+      <div class="panel-title"><span class="num">03</span> Projeção de rentabilidade</div>
+      <div class="rent-grid" id="s2-rent-grid"></div>
+      <div class="roi-row" id="s2-roi-row"></div>
+    </div>
+  </div>
+  <div id="s2-result" style="display:none;margin-top:1.5rem">
+    <div class="export-row">
+      <span class="export-label">Exportar:</span>
+      <button class="btn-export btn-xlsx" onclick="exportXLSX('s2')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Excel / Google Sheets</button>
+      <button class="btn-export btn-pdf" onclick="exportPDF('s2')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> PDF</button>
+      <div style="flex:1"></div>
+      <label>Exibir:</label>
+      <select id="s2-filter" onchange="renderTabela('s2')"><option value="all">Todos os meses</option><option value="pagamento">Só meses com pagamento</option></select>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th style="text-align:left">Mês</th><th>Saldo início</th><th>Rend. mensal</th><th>Pgto imóvel</th><th>Rend. cobre</th><th>Do principal</th><th>% coberto</th><th>Saldo fim</th></tr></thead>
+      <tbody id="s2-tbody"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- ═══ COMPARAR ═══ -->
+<div class="page" id="tab-comparar">
+  <div id="compare-content"><div class="empty-state">Simule os dois imóveis para comparar.</div></div>
+</div>
+
+<script>
+const MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const state={};
+const charts={};
+const fmt=v=>v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtR=v=>'R$ '+fmt(v);
+const fmtP=v=>v.toFixed(2)+'%';
+const gn=(id,fb=0)=>parseFloat(document.getElementById(id)?.value)||fb;
+const gs=(id,fb='')=>document.getElementById(id)?.value||fb;
+
+function parseDate(s){const p=(s||'').split('/');return{m:parseInt(p[0])-1,y:parseInt(p[1])};}
+function addMonths(m,y,n){const d=new Date(y,m+n);return{m:d.getMonth(),y:d.getFullYear()};}
+function monthLabel(m,y){return MESES[m]+'/'+String(y).slice(2);}
+function mkey(m,y){return y+'-'+String(m).padStart(2,'0');}
+
+function calcAuto(id){
+  const valor=gn(id+'-valor'), pctObra=gn(id+'-pct-obra'), meses=gn(id+'-meses');
+  const entrada=gn(id+'-entrada-total'), pctRef=gn(id+'-pct-reforco');
+  const montante=valor*(pctObra/100);
+  const totalRef=montante*(pctRef/100);
+  const qtdRef=parseInt(document.getElementById(id+'-qtd-reforcos')?.value)||0;
+  const valRefBase=qtdRef>0?totalRef/qtdRef:0;
+
+  document.getElementById(id+'-montante-display').textContent=montante>0?fmtR(montante):'—';
+  document.getElementById(id+'-total-ref').textContent=totalRef>0?fmtR(totalRef):'—';
+  document.getElementById(id+'-val-ref').textContent=valRefBase>0?fmtR(valRefBase):'—';
+
+  const anosEl=document.getElementById(id+'-anos-obra');
+  if(anosEl) anosEl.value=meses>0?(meses/12).toFixed(2)+' anos':'—';
+
+  const somaRef=getSomaReforcos(id);
+  const restante=montante-entrada-somaRef;
+  const parcela=meses>0&&restante>=0?restante/meses:null;
+  const alerta=document.getElementById(id+'-alerta');
+
+  if(montante<=0){document.getElementById(id+'-parcela-val').textContent='—';document.getElementById(id+'-parcela-sub').textContent='';alerta.style.display='none';return;}
+  if(restante<0){
+    alerta.style.display='';alerta.textContent='Atenção: entrada + reforços superam o montante da obra (R$ '+fmt(Math.abs(restante))+' a mais).';
+    document.getElementById(id+'-parcela-val').textContent='—';document.getElementById(id+'-parcela-sub').textContent='';return;
+  }
+  alerta.style.display='none';
+  if(parcela!==null){
+    document.getElementById(id+'-parcela-val').textContent=fmtR(parcela);
+    document.getElementById(id+'-parcela-sub').textContent=meses+' parcelas × '+fmtR(parcela)+' = '+fmtR(parcela*meses);
+  }
+}
+
+function getSomaReforcos(id){
+  let s=0;document.querySelectorAll('#'+id+'-reforcos .ref-val-input').forEach(el=>{s+=parseFloat(el.value)||0;});return s;
+}
+
+function syncReforcos(id){
+  const qtd=Math.max(0,parseInt(document.getElementById(id+'-qtd-reforcos')?.value)||0);
+  const lista=document.getElementById(id+'-reforcos');
+  const atual=lista.querySelectorAll('.reforco-row').length;
+  const montante=gn(id+'-valor')*(gn(id+'-pct-obra')/100);
+  const totalRef=montante*(gn(id+'-pct-reforco')/100);
+  const valBase=qtd>0?totalRef/qtd:0;
+  const ddates=['12/2026','12/2027','12/2028','12/2029','12/2030','12/2031','06/2027','06/2028'];
+  if(atual<qtd){
+    for(let i=atual;i<qtd;i++){
+      const row=document.createElement('div');row.className='reforco-row';
+      row.innerHTML=`<input type="text" class="ref-data-input" placeholder="MM/AAAA" value="${ddates[i]||''}"><input type="number" class="ref-val-input" value="${valBase.toFixed(2)}" oninput="onReforcoInput(this,'${id}')"><button class="btn-icon" onclick="removeReforco(this,'${id}')">×</button>`;
+      lista.appendChild(row);
+    }
+  } else {
+    const rows=lista.querySelectorAll('.reforco-row');
+    for(let i=atual-1;i>=qtd;i--) rows[i].remove();
+  }
+  updateLastClass(id);distributeReforcos(id);
+}
+
+function removeReforco(btn,id){
+  btn.parentElement.remove();
+  const qi=document.getElementById(id+'-qtd-reforcos');
+  if(qi) qi.value=document.querySelectorAll('#'+id+'-reforcos .reforco-row').length;
+  updateLastClass(id);distributeReforcos(id);
+}
+
+function updateLastClass(id){
+  const inputs=document.querySelectorAll('#'+id+'-reforcos .ref-val-input');
+  inputs.forEach((el,i)=>el.classList.toggle('ref-last-input',i===inputs.length-1));
+}
+
+function onReforcoInput(input,id){
+  const montante=gn(id+'-valor')*(gn(id+'-pct-obra')/100);
+  const totalRef=montante*(gn(id+'-pct-reforco')/100);
+  const inputs=Array.from(document.querySelectorAll('#'+id+'-reforcos .ref-val-input'));
+  if(inputs.length<2){calcAuto(id);return;}
+  const lastIdx=inputs.length-1;
+  if(inputs.indexOf(input)===lastIdx){calcAuto(id);return;}
+  let somaOutros=0;inputs.forEach((el,i)=>{if(i!==lastIdx)somaOutros+=parseFloat(el.value)||0;});
+  inputs[lastIdx].value=Math.max(0,totalRef-somaOutros).toFixed(2);
+  const alerta=document.getElementById(id+'-alerta');
+  if(totalRef>0&&somaOutros>totalRef){alerta.style.display='';alerta.textContent='Soma dos reforços ultrapassa o total previsto ('+fmtR(totalRef)+'). O último reforço foi zerado.';}
+  else alerta.style.display='none';
+  calcAuto(id);
+}
+
+function distributeReforcos(id){
+  const montante=gn(id+'-valor')*(gn(id+'-pct-obra')/100);
+  const totalRef=montante*(gn(id+'-pct-reforco')/100);
+  const inputs=Array.from(document.querySelectorAll('#'+id+'-reforcos .ref-val-input'));
+  if(!inputs.length)return;
+  const base=totalRef/inputs.length;
+  inputs.forEach(el=>el.value=base.toFixed(2));
+  calcAuto(id);
+}
+
+function buildSchedule(id){
+  const valor=gn(id+'-valor'),pctObra=gn(id+'-pct-obra'),meses=gn(id+'-meses');
+  const entrada=gn(id+'-entrada-total'),entradaN=gn(id+'-entrada-n');
+  const saldo0=gn(id+'-saldo'),taxa=gn(id+'-taxa')/100;
+  const inicioParc=gs(id+'-inicio','05/2026'),entradaInicio=gs(id+'-entrada-inicio','05/2026');
+  const montante=valor*(pctObra/100);
+  const somaRef=getSomaReforcos(id);
+  const restante=montante-entrada-somaRef;
+  const parcela=meses>0&&restante>=0?restante/meses:0;
+
+  const pagMap={};
+  const addP=(m,y,val,tipo)=>{
+    const k=mkey(m,y);if(!pagMap[k])pagMap[k]={valor:0,tipo};
+    pagMap[k].valor+=val;
+    if(tipo==='entrada')pagMap[k].tipo='entrada';
+    if(tipo==='reforco'&&pagMap[k].tipo==='parcela')pagMap[k].tipo='reforco';
+  };
+
+  if(entrada>0&&entradaN>0){const ei=parseDate(entradaInicio);for(let i=0;i<entradaN;i++){const d=addMonths(ei.m,ei.y,i);addP(d.m,d.y,entrada/entradaN,'entrada');}}
+  if(parcela>0&&meses>0){const pi=parseDate(inicioParc);for(let i=0;i<meses;i++){const d=addMonths(pi.m,pi.y,i);addP(d.m,d.y,parcela,'parcela');}}
+  document.querySelectorAll('#'+id+'-reforcos .reforco-row').forEach(row=>{
+    const data=row.querySelector('.ref-data-input').value;
+    const val=parseFloat(row.querySelector('.ref-val-input').value)||0;
+    if(data&&val){const d=parseDate(data);addP(d.m,d.y,val,'reforco');}
+  });
+
+  const allKeys=Object.keys(pagMap).sort();
+  if(!allKeys.length)return[];
+  const[fy,fm]=allKeys[0].split('-').map(Number);
+  const[ly,lm]=allKeys[allKeys.length-1].split('-').map(Number);
+  const total=(ly-fy)*12+(lm-fm)+1;
+  const rows=[];let saldo=saldo0;
+  for(let i=0;i<total;i++){
+    const d=addMonths(fm,fy,i);const k=mkey(d.m,d.y);
+    const pag=pagMap[k]||{valor:0,tipo:'normal'};
+    const rend=saldo*taxa,pagt=pag.valor;
+    const cobre=Math.min(rend,pagt),principal=Math.max(0,pagt-rend);
+    const pct=pagt>0?Math.min(100,rend/pagt*100):null;
+    const fim=saldo+rend-pagt;
+    rows.push({label:monthLabel(d.m,d.y),saldo,rendimento:rend,pagamento:pagt,rendCobre:cobre,doPrincipal:principal,pctCoberto:pct,saldoFim:fim,tipo:pag.tipo});
+    saldo=fim;
+  }
+  return rows;
+}
+
+function calcRent(id,rows){
+  const valor=gn(id+'-valor'),pctObra=gn(id+'-pct-obra'),meses=gn(id+'-meses'),valAnual=gn(id+'-val-anual');
+  const anos=meses/12;
+  const totalPago=rows.reduce((a,r)=>a+r.pagamento,0);
+  const totalDesembolsado=rows.reduce((a,r)=>a+r.doPrincipal,0);
+  const saldoFimObra=rows[rows.length-1].saldoFim;
+  const montante=valor*(pctObra/100);
+  const saldoPosObra=valor-montante;
+  const valorProjetado=valor*Math.pow(1+valAnual/100,anos);
+  const lucroProjetado=valorProjetado-saldoPosObra-totalDesembolsado;
+  const montanteAposVenda=valorProjetado-saldoPosObra+saldoFimObra;
+  const roiDesemp=totalDesembolsado>0?(lucroProjetado/totalDesembolsado)*100:0;
+  const roiTotal=totalPago>0?(lucroProjetado/totalPago)*100:0;
+  return{totalPago,totalDesembolsado,saldoFimObra,saldoPosObra,valorProjetado,lucroProjetado,montanteAposVenda,roiDesemp,roiTotal,anos,valAnual};
+}
+
+function renderRent(id,rows){
+  const r=calcRent(id,rows);state[id+'_rent']=r;
+  document.getElementById(id+'-rent-grid').innerHTML=`
+    <div class="rent-card"><div class="rent-lbl">Valor total pago na obra</div><div class="rent-val gold">${fmtR(r.totalPago)}</div><div class="rent-sub">entrada + parcelas + reforços</div></div>
+    <div class="rent-card"><div class="rent-lbl">Valor desembolsado (do bolso)</div><div class="rent-val gold">${fmtR(r.totalDesembolsado)}</div><div class="rent-sub">o que o rendimento não cobriu</div></div>
+    <div class="rent-card"><div class="rent-lbl">Saldo em conta no fim da obra</div><div class="rent-val gold">${fmtR(r.saldoFimObra)}</div><div class="rent-sub">após todos os pagamentos</div></div>
+    <div class="rent-card"><div class="rent-lbl">Residual a pagar após as chaves</div><div class="rent-val">${fmtR(r.saldoPosObra)}</div><div class="rent-sub">valor total − montante pago na obra</div></div>
+    <div class="rent-card hi"><div class="rent-lbl">Valor projetado na entrega (${r.valAnual}% a.a. × ${r.anos.toFixed(1)} anos)</div><div class="rent-val gold big">${fmtR(r.valorProjetado)}</div><div class="rent-sub">valorização: ${fmtR(r.valorProjetado-gn(id+'-valor'))}</div></div>
+    <div class="rent-card gr"><div class="rent-lbl">Lucro projetado</div><div class="rent-val green big">${fmtR(r.lucroProjetado)}</div><div class="rent-sub">projetado − residual − desembolsado</div></div>`;
+  document.getElementById(id+'-roi-row').innerHTML=`
+    <div class="rent-card bl"><div class="rent-lbl">ROI sobre valor desembolsado</div><div class="rent-val blue big">${fmtP(r.roiDesemp)}</div><div class="rent-sub">${fmtR(r.lucroProjetado)} ÷ ${fmtR(r.totalDesembolsado)}</div></div>
+    <div class="rent-card bl"><div class="rent-lbl">ROI sobre total pago na obra</div><div class="rent-val blue big">${fmtP(r.roiTotal)}</div><div class="rent-sub">${fmtR(r.lucroProjetado)} ÷ ${fmtR(r.totalPago)}</div></div>
+    <div class="rent-card hi"><div class="rent-lbl">Montante total em conta após venda na entrega das chaves</div><div class="rent-val gold big" style="font-size:21px">${fmtR(r.montanteAposVenda)}</div><div class="rent-sub">valor projetado − residual + saldo em conta</div></div>`;
+}
+
+function simular(id){
+  const rows=buildSchedule(id);
+  if(!rows.length){alert('Configure pelo menos um pagamento antes de simular.');return;}
+  state[id]=rows;
+  state[id+'_cfg']={nome:gs(id+'-nome',id),saldo0:gn(id+'-saldo'),taxa:gn(id+'-taxa'),valor:gn(id+'-valor'),pctObra:gn(id+'-pct-obra'),meses:gn(id+'-meses'),valAnual:gn(id+'-val-anual')};
+  document.getElementById(id+'-resumo-panel').style.display='';
+  document.getElementById(id+'-rent-section').style.display='';
+  document.getElementById(id+'-result').style.display='';
+  renderMetrics(id,rows);renderRent(id,rows);renderTabela(id);renderCompare();
+}
+
+function renderMetrics(id,rows){
+  const tp=rows.reduce((a,r)=>a+r.pagamento,0),tc=rows.reduce((a,r)=>a+r.rendCobre,0),tpr=rows.reduce((a,r)=>a+r.doPrincipal,0);
+  const pct=tp>0?(tc/tp*100):0;
+  document.getElementById(id+'-metrics').innerHTML=`<div class="metrics" style="grid-template-columns:1fr 1fr;margin-bottom:1rem">
+    <div class="metric"><div class="metric-label">Total pago (obra)</div><div class="metric-val gold">${fmtR(tp)}</div></div>
+    <div class="metric"><div class="metric-label">Coberto pelo rendimento</div><div class="metric-val green">${fmtR(tc)}</div></div>
+    <div class="metric"><div class="metric-label">Saiu do principal</div><div class="metric-val red">${fmtR(tpr)}</div></div>
+    <div class="metric"><div class="metric-label">% coberto pelo rend.</div><div class="metric-val blue">${pct.toFixed(1)}%</div></div>
+  </div>`;
+  renderChart(id,rows);
+}
+
+function renderChart(id,rows){
+  const c1=id==='s1'?'#c8a96e':'#6b9fd4';
+  const ctx=document.getElementById(id+'-chart');
+  if(charts[id])charts[id].destroy();
+  charts[id]=new Chart(ctx,{type:'line',data:{labels:rows.map(r=>r.label),datasets:[
+    {label:'Saldo',data:rows.map(r=>r.saldo),borderColor:c1,backgroundColor:c1+'18',tension:.3,pointRadius:0,fill:true,borderWidth:2},
+    {label:'Do principal',data:rows.map(r=>r.doPrincipal),borderColor:'#e05f5f',tension:.3,pointRadius:0,borderWidth:1.5,yAxisID:'y2'},
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmtR(c.parsed.y)}}},
+    scales:{x:{ticks:{maxTicksLimit:8,maxRotation:45,color:'#5c5952',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},
+      y:{ticks:{callback:v=>'R$'+(v/1000).toFixed(0)+'k',color:'#5c5952',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},
+      y2:{position:'right',ticks:{callback:v=>'R$'+(v/1000).toFixed(1)+'k',color:'#5c5952',font:{size:10}},grid:{display:false}}}}});
+}
+
+function renderTabela(id){
+  const rows=state[id];if(!rows)return;
+  const filter=document.getElementById(id+'-filter').value;
+  const data=filter==='pagamento'?rows.filter(r=>r.pagamento>0):rows;
+  const tbody=document.getElementById(id+'-tbody');tbody.innerHTML='';
+  data.forEach(r=>{
+    const tr=document.createElement('tr');
+    if(r.tipo==='reforco')tr.className='row-reforco';else if(r.tipo==='entrada')tr.className='row-entrada';
+    const tag=r.tipo==='reforco'?' ★':r.tipo==='entrada'?' ↓':'';
+    const pc=r.pctCoberto===null?'<span class="t-dim">—</span>':r.pctCoberto>=100?`<span class="t-green">${r.pctCoberto.toFixed(1)}%</span>`:r.pctCoberto>=60?`<span class="t-gold">${r.pctCoberto.toFixed(1)}%</span>`:`<span class="t-red">${r.pctCoberto.toFixed(1)}%</span>`;
+    tr.innerHTML=`<td>${r.label}${tag}</td><td>${fmtR(r.saldo)}</td><td class="t-green">${fmtR(r.rendimento)}</td><td>${r.pagamento>0?fmtR(r.pagamento):'<span class="t-dim">—</span>'}</td><td class="t-green">${r.pagamento>0?fmtR(r.rendCobre):'<span class="t-dim">—</span>'}</td><td class="${r.doPrincipal>0?'t-red':'t-dim'}">${r.pagamento>0?fmtR(r.doPrincipal):'—'}</td><td>${pc}</td><td>${fmtR(r.saldoFim)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function exportXLSX(id){
+  const rows=state[id],cfg=state[id+'_cfg'],rent=state[id+'_rent'];
+  if(!rows){alert('Simule o fluxo antes de exportar.');return;}
+  const tp=rows.reduce((a,r)=>a+r.pagamento,0),tc=rows.reduce((a,r)=>a+r.rendCobre,0),tpr=rows.reduce((a,r)=>a+r.doPrincipal,0);
+  const pct=tp>0?(tc/tp*100):0;
+  const aoa=[
+    ['Simulador de Fluxo — Investimento Imobiliário'],
+    ['Imóvel:',cfg.nome],['Valor total (R$):',cfg.valor],['% na obra:',cfg.pctObra/100],
+    ['Saldo inicial (R$):',cfg.saldo0],['Rentabilidade mensal:',cfg.taxa/100],[''],
+    ['RESUMO DO FLUXO'],
+    ['Total pago na obra:',parseFloat(tp.toFixed(2))],['Coberto pelo rendimento:',parseFloat(tc.toFixed(2))],
+    ['Saiu do principal:',parseFloat(tpr.toFixed(2))],['% coberto:',parseFloat((pct/100).toFixed(4))],[''],
+  ];
+  if(rent){
+    aoa.push(['PROJEÇÃO DE RENTABILIDADE'],
+      ['Valorização anual do imóvel:',rent.valAnual/100],['Anos de obra:',rent.anos],
+      ['Valor projetado na entrega (R$):',parseFloat(rent.valorProjetado.toFixed(2))],
+      ['Residual a pagar pós obra (R$):',parseFloat(rent.saldoPosObra.toFixed(2))],
+      ['Valor desembolsado (R$):',parseFloat(rent.totalDesembolsado.toFixed(2))],
+      ['Lucro projetado (R$):',parseFloat(rent.lucroProjetado.toFixed(2))],
+      ['ROI sobre desembolsado:',parseFloat((rent.roiDesemp/100).toFixed(4))],
+      ['ROI sobre total pago:',parseFloat((rent.roiTotal/100).toFixed(4))],
+      ['Montante total após venda (R$):',parseFloat(rent.montanteAposVenda.toFixed(2))],['']);
+  }
+  aoa.push(['FLUXO MÊS A MÊS'],['Mês','Tipo','Saldo Início (R$)','Rendimento (R$)','Pgto Imóvel (R$)','Rend. Cobre (R$)','Do Principal (R$)','% Coberto','Saldo Fim (R$)']);
+  rows.forEach(r=>aoa.push([r.label,r.tipo==='entrada'?'Entrada':r.tipo==='reforco'?'Reforço':'Parcela',parseFloat(r.saldo.toFixed(2)),parseFloat(r.rendimento.toFixed(2)),r.pagamento>0?parseFloat(r.pagamento.toFixed(2)):0,r.pagamento>0?parseFloat(r.rendCobre.toFixed(2)):0,parseFloat(r.doPrincipal.toFixed(2)),r.pctCoberto!==null?parseFloat((r.pctCoberto/100).toFixed(4)):null,parseFloat(r.saldoFim.toFixed(2))]));
+  const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols']=[{wch:32},{wch:20},{wch:18},{wch:16},{wch:18},{wch:16},{wch:18},{wch:12},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,ws,'Fluxo');
+  XLSX.writeFile(wb,(cfg.nome||'imovel').replace(/\s+/g,'_')+'_fluxo.xlsx');
+}
+
+function exportPDF(id){
+  const rows=state[id],cfg=state[id+'_cfg'],rent=state[id+'_rent'];
+  if(!rows){alert('Simule o fluxo antes de exportar.');return;}
+  const tp=rows.reduce((a,r)=>a+r.pagamento,0),tc=rows.reduce((a,r)=>a+r.rendCobre,0),tpr=rows.reduce((a,r)=>a+r.doPrincipal,0);
+  const pct=tp>0?(tc/tp*100):0;
+  const trs=rows.map(r=>`<tr style="${r.tipo==='reforco'?'background:#fff8e1':r.tipo==='entrada'?'background:#e8f5e9':''}"><td>${r.label}${r.tipo==='reforco'?' ★':r.tipo==='entrada'?' ↓':''}</td><td>${fmtR(r.saldo)}</td><td>${fmtR(r.rendimento)}</td><td>${r.pagamento>0?fmtR(r.pagamento):'—'}</td><td>${r.pagamento>0?fmtR(r.rendCobre):'—'}</td><td style="color:${r.doPrincipal>0?'#c0392b':'#aaa'}">${r.pagamento>0?fmtR(r.doPrincipal):'—'}</td><td style="color:${r.pctCoberto===null?'#aaa':r.pctCoberto>=100?'#27ae60':r.pctCoberto>=60?'#e67e22':'#c0392b'}">${r.pctCoberto!==null?r.pctCoberto.toFixed(1)+'%':'—'}</td><td>${fmtR(r.saldoFim)}</td></tr>`).join('');
+  const rentHTML=rent?`<h2>Projeção de rentabilidade</h2>
+  <div class="cards"><div class="card"><div class="cl">Total pago na obra</div><div class="cv">${fmtR(rent.totalPago)}</div></div><div class="card"><div class="cl">Valor desembolsado</div><div class="cv">${fmtR(rent.totalDesembolsado)}</div></div><div class="card"><div class="cl">Saldo em conta (fim obra)</div><div class="cv">${fmtR(rent.saldoFimObra)}</div></div><div class="card"><div class="cl">Residual a pagar pós obra</div><div class="cv">${fmtR(rent.saldoPosObra)}</div></div></div>
+  <div class="cards" style="margin-top:6px"><div class="card" style="border-color:#b8860b;background:#fffde7"><div class="cl">Valor projetado (${rent.valAnual}% a.a. × ${rent.anos.toFixed(1)} anos)</div><div class="cv" style="color:#b8860b;font-size:15px">${fmtR(rent.valorProjetado)}</div></div><div class="card" style="border-color:#27ae60;background:#e8f5e9"><div class="cl">Lucro projetado</div><div class="cv" style="color:#27ae60;font-size:15px">${fmtR(rent.lucroProjetado)}</div></div><div class="card" style="border-color:#2980b9;background:#e8f4fd"><div class="cl">ROI sobre desembolsado</div><div class="cv" style="color:#2980b9;font-size:15px">${fmtP(rent.roiDesemp)}</div></div><div class="card" style="border-color:#2980b9;background:#e8f4fd"><div class="cl">ROI sobre total pago</div><div class="cv" style="color:#2980b9;font-size:15px">${fmtP(rent.roiTotal)}</div></div></div>
+  <div class="card" style="margin-top:6px;border-color:#b8860b;background:#fffde7"><div class="cl">Montante total em conta após venda na entrega das chaves</div><div class="cv" style="color:#b8860b;font-size:17px">${fmtR(rent.montanteAposVenda)}</div><div style="font-size:9px;color:#888;margin-top:2px">valor projetado − residual do imóvel + saldo em conta no fim da obra</div></div>`:'';
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Fluxo — ${cfg.nome}</title><style>body{font-family:Arial,sans-serif;font-size:11px;color:#111;margin:1.5cm;}h1{font-size:17px;margin-bottom:4px;}h2{font-size:12px;margin:12px 0 6px;color:#555;border-bottom:1px solid #ddd;padding-bottom:3px;}.meta{font-size:11px;color:#666;margin-bottom:10px;}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;}.card{border:1px solid #ddd;border-radius:4px;padding:7px 9px;}.cl{font-size:9px;text-transform:uppercase;color:#888;margin-bottom:2px;}.cv{font-size:12px;font-weight:bold;}table{width:100%;border-collapse:collapse;font-size:9.5px;margin-top:6px;}th{background:#f5f5f5;text-align:right;padding:4px 6px;border:1px solid #ddd;font-size:8.5px;text-transform:uppercase;white-space:nowrap;}th:first-child{text-align:left;}td{padding:3px 6px;border:1px solid #eee;text-align:right;white-space:nowrap;}td:first-child{text-align:left;}.leg{font-size:8.5px;color:#888;margin-top:5px;}@media print{body{margin:.8cm;}}</style></head><body>
+  <h1>Simulador de Fluxo — Investimento Imobiliário</h1>
+  <div class="meta">${cfg.nome} &nbsp;|&nbsp; Saldo inicial: ${fmtR(cfg.saldo0)} &nbsp;|&nbsp; Rentabilidade: ${cfg.taxa}% a.m. &nbsp;|&nbsp; Gerado em ${new Date().toLocaleDateString('pt-BR')}</div>
+  <h2>Resumo do fluxo</h2>
+  <div class="cards"><div class="card"><div class="cl">Total pago (obra)</div><div class="cv">${fmtR(tp)}</div></div><div class="card"><div class="cl">Coberto pelo rendimento</div><div class="cv" style="color:#27ae60">${fmtR(tc)}</div></div><div class="card"><div class="cl">Saiu do principal</div><div class="cv" style="color:#c0392b">${fmtR(tpr)}</div></div><div class="card"><div class="cl">% coberto</div><div class="cv" style="color:#2980b9">${pct.toFixed(1)}%</div></div></div>
+  ${rentHTML}
+  <h2>Fluxo mês a mês</h2>
+  <table><thead><tr><th style="text-align:left">Mês</th><th>Saldo início</th><th>Rend. mensal</th><th>Pgto imóvel</th><th>Rend. cobre</th><th>Do principal</th><th>% coberto</th><th>Saldo fim</th></tr></thead><tbody>${trs}</tbody></table>
+  <div class="leg">★ Reforço &nbsp; ↓ Entrada</div></body></html>`;
+  const win=window.open('','_blank');win.document.write(html);win.document.close();win.onload=()=>{win.focus();win.print();};
+}
+
+function renderCompare(){
+  const s1=state.s1,s2=state.s2,c1=state.s1_cfg,c2=state.s2_cfg;
+  const r1=state.s1_rent,r2=state.s2_rent;
+  const el=document.getElementById('compare-content');
+  if(!s1&&!s2){el.innerHTML='<div class="empty-state">Simule os dois imóveis para comparar.</div>';return;}
+  if(!s1||!s2){el.innerHTML='<div class="empty-state">Simule os dois imóveis para comparar lado a lado.</div>';return;}
+  const sum=rows=>({tp:rows.reduce((a,r)=>a+r.pagamento,0),tc:rows.reduce((a,r)=>a+r.rendCobre,0),tpr:rows.reduce((a,r)=>a+r.doPrincipal,0),pct:rows.reduce((a,r)=>a+r.pagamento,0)>0?(rows.reduce((a,r)=>a+r.rendCobre,0)/rows.reduce((a,r)=>a+r.pagamento,0)*100):0,sf:rows[rows.length-1].saldoFim});
+  const a=sum(s1),b=sum(s2);
+  const mRow=(label,va,vb,higher=false,isPct=false)=>{const aw=higher?va>=vb:va<=vb;const f=isPct?v=>v.toFixed(1)+'%':fmtR;return`<div style="margin-bottom:8px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">${label}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="compare-metric ${aw?'winner':''}"><div class="lbl">${c1.nome}${aw?' 🏆':''}</div><div class="val">${f(va)}</div></div><div class="compare-metric ${!aw?'winner':''}"><div class="lbl">${c2.nome}${!aw?' 🏆':''}</div><div class="val">${f(vb)}</div></div></div></div>`;};
+  el.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem">
+    <div><div class="section-title">${c1.nome}</div><div style="position:relative;height:180px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:.75rem"><canvas id="cmp-a"></canvas></div></div>
+    <div><div class="section-title">${c2.nome}</div><div style="position:relative;height:180px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:.75rem"><canvas id="cmp-b"></canvas></div></div>
+  </div>
+  <div class="panel">${[mRow('Total pago na obra',a.tp,b.tp),mRow('Coberto pelo rendimento',a.tc,b.tc,true),mRow('Saiu do bolso',a.tpr,b.tpr),mRow('% coberto',a.pct,b.pct,true,true),mRow('Saldo ao final',a.sf,b.sf,true)].join('')}</div>
+  ${r1&&r2?`<div class="panel" style="margin-top:1.25rem"><div class="panel-title">Rentabilidade projetada</div>${[mRow('Valor projetado na entrega',r1.valorProjetado,r2.valorProjetado,true),mRow('Lucro projetado',r1.lucroProjetado,r2.lucroProjetado,true),mRow('ROI sobre desembolsado',r1.roiDesemp,r2.roiDesemp,true,true),mRow('ROI sobre total pago',r1.roiTotal,r2.roiTotal,true,true),mRow('Montante após venda',r1.montanteAposVenda,r2.montanteAposVenda,true)].join('')}</div>`:''}`;
+  setTimeout(()=>{
+    ['a','b'].forEach((k,i)=>{
+      const rows=[s1,s2][i],color=i===0?'#c8a96e':'#6b9fd4';
+      new Chart(document.getElementById('cmp-'+k),{type:'line',data:{labels:rows.map(r=>r.label),datasets:[{data:rows.map(r=>r.saldo),borderColor:color,backgroundColor:color+'18',tension:.3,pointRadius:0,fill:true,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{maxTicksLimit:6,maxRotation:45,color:'#5c5952',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{callback:v=>'R$'+(v/1000).toFixed(0)+'k',color:'#5c5952',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}}}}});
+    });
+  },50);
+}
+
+function showTab(id){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['sim1','sim2','comparar'][i]===id));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  if(id==='comparar')renderCompare();
+}
+
+syncReforcos('s1');calcAuto('s1');
+</script>
+</body>
+</html>
